@@ -1,0 +1,25 @@
+{
+  "name": "tumblrtest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "dependencies": {
+    "dotenv": "^5.0.0",
+    "tumblr.js": "^1.1.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DWBayly/Tumblrtest.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DWBayly/Tumblrtest/issues"
+  },
+  "homepage": "https://github.com/DWBayly/Tumblrtest#readme"
+}
