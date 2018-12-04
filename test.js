@@ -16,15 +16,33 @@ function download(uri, filename, callback){
     request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
   });
 };
-function recursiveStuff(name,offset,likes){
+function recursiveLikes(offset,likes){
 	return new Promise(function(resolve,reject){
-		client.blogLikes(name,{limit:200,offset:offset},function(err,data){
+		client.blogLikes(process.env.blog,{limit:200,offset:offset},function(err,data){
+			//return resolve(data.liked_posts);
 			likes=likes.concat(data.liked_posts);
 			console.log(data.liked_posts.length);
-			if(offset>=data.liked_count || offset>=50){
-				resolve(likes);
+			if(offset>=data.liked_count){
+				return resolve(likes);
 			}else{
-				recursiveStuff(name,offset+data.liked_posts.length,likes).then(function(res){
+				recursiveLikes(offset+data.liked_posts.length,likes).then(function(res){
+					resolve(res);
+				})
+			}
+		});
+	})
+
+}
+function recursivePosts(offset,posts){
+	return new Promise(function(resolve,reject){
+		client.blogPosts(process.env.blog,{limit:200,offset:offset},function(err,data){
+
+			//resolve(data.posts);
+			posts=posts.concat(data.posts);
+			if(offset>=data.total_posts ){
+				return resolve(posts);
+			}else{
+				recursivePosts(offset+data.posts.length,posts).then(function(res){
 					resolve(res);
 				})
 			}
@@ -34,86 +52,108 @@ function recursiveStuff(name,offset,likes){
 }
 
 
-
-function backup(name){
-	let re = /\/([^\/]*)$/;
+function backup(){
 	return new Promise(function(resolve,reject){
-		recursiveStuff(process.env.blog,0,[]).then(function(likes){
-		let filename="";
-	 	for(let x in likes){
-	 	    switch(likes[x].type){
-				case 'photo':
-					mkdirp('./photos/'+likes[x].reblog_key, function(err) {
-				    	for(let y in likes[x].photos){
-				    		let filename = re.exec(likes[x].photos[y].original_size.url)[1];
-				    		download(likes[x].photos[y].original_size.url, "./photos/"+likes[x].reblog_key+"/"+filename, function(){
-					  			console.log('done');
-							});
-				    	}
-			    	});
-	    		break;
-				case 'text':
-					mkdirp('./text/'+likes[x].reblog_key, function(err) {
-			    		let content = likes[x].body;
-			    		let linkre = /<img\ssrc="([^"]*)/g;
-			    		let links = "";
-						let imagearr=[];
-						let index = 0;
-						while((links=linkre.exec(content))!=null){
-							index++;
-			    			//console.log(links);
-			    			imagearr.push(links[1]);
-				   		}
-						//console.log(imagearr);
-						for(let z in imagearr){
-							filename = re.exec(imagearr[z])[1];
-							console.log(filename);
-							content=content.replace(imagearr[z],filename);
-								download(imagearr[z],'./text/'+likes[x].reblog_key+"/"+filename,function(err){
-									if(err){
-										console.log(err);
-									}
-								});
-						}
-						fs.writeFile('./text/'+likes[x].reblog_key+'/index.html',content,function(err){
-							if(err){
-								console.log(err);
-							}
-						})
-					});
-				break;	
-		    	case 'audio':
-					mkdirp('./audio/'+likes[x].reblog_key, function(err) {
-						filename = re.exec(likes[x].audio_url)[1];
-						download(likes[x].audio_url,'./audio/'+likes[x].reblog_key+"/"+filename,function(err){
-							if(err){
-								console.log(err);
-							}
-						});
-					});
-	    		break;	
-		    	case 'video':
-					mkdirp('./video/'+likes[x].reblog_key, function(err) {
-						filename = re.exec(likes[x].video_url)[1];
-			    		download(likes[x].video_url,'./video/'+likes[x].reblog_key+"/"+filename,function(err){
-							if(err){
-			    				console.log(err);
-			    			}
-			    		});
-					});
-		    		break;
-			    	default:
-			    	//console.log(likes[x]);
-				}	
-			}
+		recursivePosts(0,[]).then(function(posts){
+			console.log("Made it",posts.length);
+			recursiveLikes(0,posts).then(function(likes){
+				let x =-1; 
+				setInterval(function(){
+					x++;
+					console.log("handling post number"+x);
+					handlePost(likes[x]);
+				},2500);
+				
+				return resolve(true);
+			});
 		});
-		resolve(true);
 	}) 
 }
+function handlePost(like){
+	let re = /\/([^\/]*)$/;
+	let path = "";
+	//return new Promise(function(resolve,reject){
+		switch(like.type){
+			case 'photo':
+				mkdirp('./photos/'+like.reblog_key, function(err) {
+					for(let y in like.photos){
+						let filename = re.exec(like.photos[y].original_size.url)[1];
+			    		download(like.photos[y].original_size.url, "./photos/"+like.reblog_key+"/"+filename, function(){
+							console.log('done');
 
-// client.blogLikes(process.env.blog,2,function(res,data){
-// 	console.log(data.liked_count); 
-// })
+						});
+					}
+				});
+			break;
+			case 'text':
+				path = './text/'+like.reblog_key;
+				mkdirp('./text/'+like.reblog_key, function(err) {
+				let content = like.body;
+				let linkre = /<img\ssrc="([^"]*)/g;
+				let links = "";
+				let imagearr=[];
+				while((links=linkre.exec(content))!=null){
+					imagearr.push(links[1]);
+				}
+				for(let z in imagearr){
+					filename = re.exec(imagearr[z]);
+						if(filename!=null){
+							filename=filename[1];
+							content=content.replace(imagearr[z],filename);
+							download(imagearr[z],'./text/'+like.reblog_key+"/"+filename,function(err){
+							if(err){
+								console.log(err);
+								}
+							});
+							}else{
+											console("Null detected",like);
+										}
+									}
+									fs.writeFile('./text/'+like.reblog_key+'/index.html',content,function(err){
+										if(err){
+											console.log(err);
+										}
+									})
+					});
+			break;	
+			case 'audio':
+								mkdirp('./audio/'+like.reblog_key, function(err) {
+									filename = re.exec(like.audio_url);
+									if(filename!=null){
+										filename=filename[1];
+										download(like.audio_url,'./audio/'+like.reblog_key+"/"+filename,function(err){
+											if(err){
+												console.log(err);
+											}
+										});
+									}else{
+										console("Null detected",like);
+									}
+								});
+			break;	
+			case 'video':
+								mkdirp('./video/'+like.reblog_key, function(err) {
+									filename = re.exec(like.video_url);
+									if(filename!=null){
+										filename=filename[1];
+						    			download(like.video_url,'./video/'+like.reblog_key+"/"+filename,function(err){
+											if(err){
+						    					console.log(err);
+						    				}
+						    			});
+						    		}else{
+						    			console.log("Null detected",like);
+						    		}
+								});
+			break;
+			default:
+			console.log(like.type);
+		}	
+		return true;
+	//})
+}
+
+
 
 mkdirp('./photos', function(err) {
 	mkdirp('./video',function(err){
@@ -123,7 +163,7 @@ mkdirp('./photos', function(err) {
 					console.log(err);
 					exit();
 				}
-				backup(process.env.blog).then(function(res){
+				backup().then(function(res){
 					console.log(res);
 				})
 		    	// path exists unless there was an error
@@ -132,7 +172,3 @@ mkdirp('./photos', function(err) {
 		});
 	});
 });
-
-// download('https://66.media.tumblr.com/4faca7217fb4cba0ccf85386f4c5b725/tumblr_n0gia5bS6Q1sjep8do1_1280.jpg', 'google.png', function(){
-//   console.log('done');
-// });
