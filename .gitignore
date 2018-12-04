@@ -1,2 +1,6 @@
 .env
 node_modules
+text
+photos
+video
+audio
