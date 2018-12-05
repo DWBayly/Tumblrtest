@@ -64,17 +64,18 @@ function backup(){
 				let x =0; 
 				//console.log(likes[642]);
 				let interval = setInterval(function(){
-					if(x>=likes.length){
+					if(x>=likes.length-1||likes[x]==undefined){
 						console.log('All Done!');
 						clearInterval(interval);
-					}
-					x++;
-					console.log("handling post number"+x);
-					try{
+					}else{
+						x++;
+						console.log("handling post number"+x);
+						try{
 
-						handlePost(likes[x]);
-					}catch(err){
-						console.log(err);
+							handlePost(likes[x]);
+						}catch(err){
+							console.log(err);
+						}
 					}
 				},500);
 				
