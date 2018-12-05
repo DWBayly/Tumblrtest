@@ -63,10 +63,10 @@ function backup(){
 			recursiveLikes(0,posts).then(function(likes){
 				let x =0; 
 				//console.log(likes[642]);
-				setInterval(function(){
+				let interval = setInterval(function(){
 					if(x>=likes.length){
 						console.log('All Done!');
-						exit();
+						clearInterval(interval);
 					}
 					x++;
 					console.log("handling post number"+x);
