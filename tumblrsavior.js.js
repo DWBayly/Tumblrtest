@@ -13,7 +13,11 @@ let client = tumblr.createClient({
 var mkdirp = require('mkdirp');
 function download(uri, filename, callback){
   request.head(uri, function(err, res, body){
+  	try{
     request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+  	}catch(err){
+  		console.log(err);
+  	}
   });
 };
 function recursiveLikes(offset,likes){
@@ -57,12 +61,22 @@ function backup(){
 		recursivePosts(0,[]).then(function(posts){
 			console.log("Made it",posts.length);
 			recursiveLikes(0,posts).then(function(likes){
-				let x =-1; 
+				let x =0; 
+				//console.log(likes[642]);
 				setInterval(function(){
+					if(x>=likes.length){
+						console.log('All Done!');
+						exit();
+					}
 					x++;
 					console.log("handling post number"+x);
-					handlePost(likes[x]);
-				},2500);
+					try{
+
+						handlePost(likes[x]);
+					}catch(err){
+						console.log(err);
+					}
+				},500);
 				
 				return resolve(true);
 			});
@@ -106,7 +120,7 @@ function handlePost(like){
 								}
 							});
 							}else{
-											console("Null detected",like);
+											console("Null detected");
 										}
 									}
 									fs.writeFile('./text/'+like.reblog_key+'/index.html',content,function(err){
@@ -117,6 +131,9 @@ function handlePost(like){
 					});
 			break;	
 			case 'audio':
+				if(like.audio_type=='soundcloud'){
+					return;
+				}
 								mkdirp('./audio/'+like.reblog_key, function(err) {
 									filename = re.exec(like.audio_url);
 									if(filename!=null){
@@ -127,7 +144,7 @@ function handlePost(like){
 											}
 										});
 									}else{
-										console("Null detected",like);
+										console("Null detected");
 									}
 								});
 			break;	
@@ -142,7 +159,7 @@ function handlePost(like){
 						    				}
 						    			});
 						    		}else{
-						    			console.log("Null detected",like);
+						    			console.log("Null detected");
 						    		}
 								});
 			break;
