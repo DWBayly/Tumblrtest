@@ -1,4 +1,4 @@
-#Tumblr Savior
+# Tumblr Savior
 
 This node script is set to save the likes and posts of a blog. 
 
@@ -7,7 +7,7 @@ Audio files will be saved, but sound cloud links will not download.
 Videos will be saved, but youtube links will not download. 
 
 
-$$ Getting Started 
+## Getting Started 
 
 To start off, visit https://www.tumblr.com/oauth/apps and register an application. Get your credentials and store them. 
 
